@@ -17,6 +17,7 @@ export class BoardCtrl extends PaneCtrl {
   constructor(root: DasherCtrl) {
     super(root);
     this.more = toggle(false, root.redraw);
+    this.showZoomReset(this.getVar('zoom') !== 80);
     for (const dim of ['d2', 'd3'] as const) {
       this.featured[dim] = this.data[dim].list.filter(t => t.featured).map(t => t.name);
     }
@@ -53,6 +54,15 @@ export class BoardCtrl extends PaneCtrl {
         ),
       ]),
       ...this.propSliders(),
+      this.showZoomReset() &&
+        h(
+          'button.text.reset',
+          {
+            attrs: { 'data-icon': licon.Back, type: 'button' },
+            hook: bind('click', this.resetZoom),
+          },
+          i18n.site.sizeReset,
+        ),
       this.showReset() &&
         h(
           'button.text.reset',
@@ -114,10 +124,24 @@ export class BoardCtrl extends PaneCtrl {
     this.redraw();
   };
 
+  private resetZoom = () => {
+    const zoomDefault = 80;
+    this.setVar('zoom', zoomDefault);
+    this.postPref('zoom');
+    this.showZoomReset(false);
+    this.sliderKey = Date.now();
+    this.redraw();
+  };
+
   private getVar = (prop: string) =>
     parseInt(window.getComputedStyle(document.body).getPropertyValue(`---${prop}`));
 
   private setVar = (prop: string, v: number) => {
+    if (prop === 'zoom') {
+      this.showZoomReset(v !== 80);
+    } else {
+      this.showReset(!this.isDefault());
+    }
     this.showReset(this.showReset() || !this.isDefault());
     document.body.style.setProperty(`---${prop}`, v.toString());
     document.body.classList.toggle('simple-board', this.isDefault());
@@ -162,6 +186,7 @@ export class BoardCtrl extends PaneCtrl {
 
   private isDefault = () => this.defaults.every(([prop, v]) => this.getVar(prop) === v);
   private showReset = toggle(!this.isDefault());
+  private showZoomReset = toggle(false);
 
   private propSliders = () => {
     const sliders = [];

@@ -3991,6 +3991,8 @@ interface I18n {
     siteDescription: string;
     /** Size */
     size: string;
+    /** Reset size to default */
+    sizeReset: string;
     /** Skip this move */
     skipThisMove: string;
     /** Slow */
