@@ -296,23 +296,44 @@ final class Tournament(env: Env, apiC: => Api)(using akka.stream.Materializer) e
     cachedTour(id).flatMap:
       _.filter(_.createdBy.is(me) || isGranted(_.ManageTournament)).so { tour =>
         env.team.api.lightsByTourLeader(me).flatMap { teams =>
-          bindForm(forms.edit(teams, tour))(
-            jsonFormError,
-            data =>
-              given GetMyTeamIds = _ => fuccess(teams.map(_.id))
-              api.apiUpdate(tour, data).flatMap { tour =>
-                jsonView(
-                  tour,
-                  none,
-                  none,
-                  none,
-                  partial = false,
-                  withScores = true,
-                  withAllowList = true,
-                  withDescription = true
-                ).map { Ok(_) }
-              }
-          )
+          val form = forms.edit(teams, tour)
+          ctx.req.contentType match
+            case Some("application/json") =>
+              bindForm(form)(
+                jsonFormError,
+                data =>
+                  given GetMyTeamIds = _ => fuccess(teams.map(_.id))
+                  api.apiUpdate(tour, data).flatMap { tour =>
+                    jsonView(
+                      tour,
+                      none,
+                      none,
+                      none,
+                      partial = false,
+                      withScores = true,
+                      withAllowList = true,
+                      withDescription = true
+                    ).map { Ok(_) }
+                  }
+              )
+            case _ =>
+              bindForm(form)(
+                jsonFormError,
+                data =>
+                  given GetMyTeamIds = _ => fuccess(teams.map(_.id))
+                  api.update(tour, data).flatMap { tour =>
+                    jsonView(
+                      tour,
+                      none,
+                      none,
+                      none,
+                      partial = false,
+                      withScores = true,
+                      withAllowList = true,
+                      withDescription = true
+                    ).map { Ok(_) }
+                  }
+              )
         }
       }
   }
@@ -427,10 +448,20 @@ final class Tournament(env: Env, apiC: => Api)(using akka.stream.Materializer) e
   def update(id: TourId) = AuthBody { ctx ?=> me ?=>
     WithEditableTournament(id): tour =>
       env.team.api.lightsByTourLeader(me).flatMap { teams =>
-        bindForm(forms.edit(teams, tour))(
-          err => BadRequest.page(views.tournament.form.edit(tour, err, teams)),
-          data => api.update(tour, data).inject(Redirect(routes.Tournament.show(id)).flashSuccess)
-        )
+        val form = forms.edit(teams, tour)
+        ctx.req.contentType match
+          case Some("application/json") =>
+            bindForm(form)(
+              jsonFormError,
+              data =>
+                api.apiUpdate(tour, data) inject Redirect(routes.Tournament.show(id)).flashSuccess
+            )
+          case _ =>
+            bindForm(form)(
+              err => BadRequest.page(views.tournament.form.edit(tour, err, teams)),
+              data =>
+                api.update(tour, data) inject Redirect(routes.Tournament.show(id)).flashSuccess
+            )
       }
   }
 
