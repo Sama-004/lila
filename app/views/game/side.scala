@@ -102,8 +102,7 @@ def meta(
         chess.variant.Chess960
           .positionNumber(initialFen | chess.format.Fen.initial)
           .map: number =>
-            val url = routes.UserAnalysis
-              .parseArg(s"chess960/${underscoreFen(initialFen | chess.format.Fen.initial)}")
+            val url = s"${routes.Editor.index}/${underscoreFen(initialFen | chess.format.Fen.initial)}"
             st.section(trans.site.chess960StartPosition(a(href := url)(number)))
       ,
       userTv.map: u =>
